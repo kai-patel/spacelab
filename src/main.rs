@@ -38,6 +38,19 @@ impl std::fmt::Display for Location {
     }
 }
 
+#[derive(Component, Default, Debug)]
+struct Anchor(f32, f32);
+
+impl From<&Anchor> for Vec3 {
+    fn from(a: &Anchor) -> Self {
+        Vec3 {
+            x: a.0,
+            y: a.1,
+            z: 0.,
+        }
+    }
+}
+
 #[derive(Component, Default)]
 struct Size(u16);
 
@@ -72,6 +85,7 @@ struct Station;
 struct VesselBundle {
     name: Name,
     location: Location,
+    anchor: Anchor,
     size: Size,
     storage: Storage,
     price: Price,
@@ -140,34 +154,38 @@ fn spawn_ship(mut commands: Commands) {
         });
 }
 
-fn setup(
+fn spawn_camera(mut commands: Commands) {
+    commands.spawn_bundle(Camera2dBundle::default());
+}
+
+fn draw_stations(
     mut commands: Commands,
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<ColorMaterial>>,
+    asset_server: Res<AssetServer>,
+    query: Query<(&Name, &Anchor), With<Station>>,
 ) {
-    commands.spawn_bundle(Camera2dBundle::default());
-    commands.spawn_bundle(SpriteBundle {
-        sprite: Sprite {
-            color: Color::rgb(0.3, 0.4, 0.5),
-            custom_size: Some(Vec2::new(50.0, 100.0)),
+    for (name, anchor) in query.iter() {
+        commands.spawn_bundle(MaterialMesh2dBundle {
+            mesh: meshes.add(Mesh::from(shape::Circle::default())).into(),
+            transform: Transform::from_translation(Vec3::from(anchor)).with_scale(Vec3::splat(8.)),
+            material: materials.add(ColorMaterial::from(Color::GREEN)),
             ..default()
-        },
-        ..default()
-    });
+        });
 
-    commands.spawn_bundle(MaterialMesh2dBundle {
-        mesh: meshes.add(shape::Circle::new(50.).into()).into(),
-        material: materials.add(ColorMaterial::from(Color::PURPLE)),
-        transform: Transform::from_translation(Vec3::new(-100., 0., 0.)),
-        ..default()
-    });
-
-    commands.spawn_bundle(MaterialMesh2dBundle {
-        mesh: meshes.add(shape::RegularPolygon::new(50., 6).into()).into(),
-        material: materials.add(ColorMaterial::from(Color::TURQUOISE)),
-        transform: Transform::from_translation(Vec3::new(-100., 0., 0.)),
-        ..default()
-    });
+        commands.spawn_bundle(Text2dBundle {
+            text: Text::from_section(
+                name.0.to_string(),
+                TextStyle {
+                    font_size: 20.0,
+                    font: asset_server.load("fonts/FiraCode-Retina.ttf"),
+                    color: Color::WHITE,
+                    ..default()
+                },
+            ),
+            ..default()
+        });
+    }
 }
 
 fn print_stations(
@@ -224,9 +242,10 @@ fn main() {
         .add_plugins(DefaultPlugins)
         .insert_resource(StationTimer(Timer::from_seconds(0.0, false)))
         .insert_resource(ShipTimer(Timer::from_seconds(0.0, false)))
-        .add_startup_system(setup)
+        .add_startup_system(spawn_camera)
         .add_startup_system(spawn_station)
         .add_startup_system(spawn_ship)
+        .add_system(draw_stations)
         .add_system(print_stations)
         .add_system(print_ships)
         .run();
