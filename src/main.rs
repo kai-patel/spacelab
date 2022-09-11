@@ -94,7 +94,12 @@ struct VesselBundle {
 }
 struct StationTimer(Timer);
 
-fn spawn_station(mut commands: Commands) {
+fn spawn_station(
+    mut commands: Commands,
+    mut meshes: ResMut<Assets<Mesh>>,
+    mut materials: ResMut<Assets<ColorMaterial>>,
+    asset_server: Res<AssetServer>,
+) {
     commands
         .spawn()
         .insert(Station)
@@ -105,7 +110,30 @@ fn spawn_station(mut commands: Commands) {
             storage: Storage(1_000),
             price: Price(150_000_000_000),
             vessel_type: Type::STATION,
+            anchor: Anchor(40., 100.),
             ..default()
+        })
+        .insert_bundle(MaterialMesh2dBundle {
+            mesh: meshes.add(Mesh::from(shape::Quad::default())).into(),
+            transform: Transform::from_translation(Vec3::from(&Anchor(40., 100.)))
+                .with_scale(Vec3::splat(8.)),
+            material: materials.add(ColorMaterial::from(Color::GREEN)),
+            ..default()
+        })
+        .with_children(|parent| {
+            parent.spawn_bundle(Text2dBundle {
+                text: Text::from_section(
+                    "ISS".to_string(),
+                    TextStyle {
+                        // font_size: 3.0,
+                        font: asset_server.load("fonts/FiraCode-Retina.ttf"),
+                        color: Color::WHITE,
+                        ..default()
+                    },
+                ),
+                transform: Transform::default(),
+                ..default()
+            });
         });
 }
 
@@ -158,33 +186,9 @@ fn spawn_camera(mut commands: Commands) {
     commands.spawn_bundle(Camera2dBundle::default());
 }
 
-fn draw_stations(
-    mut commands: Commands,
-    mut meshes: ResMut<Assets<Mesh>>,
-    mut materials: ResMut<Assets<ColorMaterial>>,
-    asset_server: Res<AssetServer>,
-    query: Query<(&Name, &Anchor), With<Station>>,
-) {
-    for (name, anchor) in query.iter() {
-        commands.spawn_bundle(MaterialMesh2dBundle {
-            mesh: meshes.add(Mesh::from(shape::Circle::default())).into(),
-            transform: Transform::from_translation(Vec3::from(anchor)).with_scale(Vec3::splat(8.)),
-            material: materials.add(ColorMaterial::from(Color::GREEN)),
-            ..default()
-        });
-
-        commands.spawn_bundle(Text2dBundle {
-            text: Text::from_section(
-                name.0.to_string(),
-                TextStyle {
-                    font_size: 20.0,
-                    font: asset_server.load("fonts/FiraCode-Retina.ttf"),
-                    color: Color::WHITE,
-                    ..default()
-                },
-            ),
-            ..default()
-        });
+fn redraw_stations(mut query: Query<&mut Transform, (With<Station>, Without<Text>)>) {
+    for mut transform in query.iter_mut() {
+        transform.rotate_around(Vec3::default(), Quat::from_rotation_z(0.01));
     }
 }
 
@@ -239,13 +243,14 @@ fn print_ships(
 
 fn main() {
     App::new()
+        .insert_resource(ClearColor(Color::BLACK))
         .add_plugins(DefaultPlugins)
         .insert_resource(StationTimer(Timer::from_seconds(0.0, false)))
         .insert_resource(ShipTimer(Timer::from_seconds(0.0, false)))
         .add_startup_system(spawn_camera)
         .add_startup_system(spawn_station)
         .add_startup_system(spawn_ship)
-        .add_system(draw_stations)
+        .add_system(redraw_stations)
         .add_system(print_stations)
         .add_system(print_ships)
         .run();
