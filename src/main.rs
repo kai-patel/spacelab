@@ -89,7 +89,7 @@ fn spawn_solar_system(
                                     },
                                 )
                                 .with_alignment(TextAlignment::CENTER),
-                                transform: Transform::from_translation(Vec3::new(10.0, 0.0, 0.0)),
+                                transform: Transform::from_translation(Vec3::new(25.0, 0.0, 0.0)),
                                 ..default()
                             });
                         });
