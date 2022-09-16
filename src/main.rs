@@ -89,7 +89,7 @@ fn spawn_solar_system(
                                     },
                                 )
                                 .with_alignment(TextAlignment::CENTER),
-                                transform: Transform::from_translation(Vec3::new(5.0, 0.0, 0.0)),
+                                transform: Transform::from_translation(Vec3::new(10.0, 0.0, 0.0)),
                                 ..default()
                             });
                         });
@@ -108,12 +108,6 @@ fn draw_orbiting(mut query: Query<(&mut Transform, &Orbiting)>) {
     }
 }
 
-fn draw_label(mut text_query: Query<(&mut Transform, &GlobalTransform), With<Text>>) {
-    // for (mut transform, global)in text_query.iter_mut() {
-    //     println!("{:?}", global);
-    // }
-}
-
 fn main() {
     App::new()
         .insert_resource(ClearColor(Color::BLACK))
@@ -121,6 +115,5 @@ fn main() {
         .add_startup_system(spawn_camera)
         .add_startup_system(spawn_solar_system)
         .add_system(draw_orbiting)
-        .add_system(draw_label)
         .run();
 }
