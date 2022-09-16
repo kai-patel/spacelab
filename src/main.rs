@@ -1,23 +1,8 @@
 use bevy::{prelude::*, sprite::MaterialMesh2dBundle};
 
-#[derive(Component, Default)]
-enum Type {
-    #[default]
-    STATION,
-    SHIP,
-}
-
-#[derive(Component, Default)]
-struct Slots {
-    eng: u8,
-    hab: u8,
-    def: u8,
-}
-
-impl std::fmt::Display for Slots {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "({}, {}, {})", self.eng, self.hab, self.def)
-    }
+#[derive(Component)]
+struct Orbiting {
+    speed: f32,
 }
 
 #[derive(Component, Default)]
@@ -30,71 +15,21 @@ impl std::fmt::Display for Name {
 }
 
 #[derive(Component, Default)]
-struct Location(String);
-
-impl std::fmt::Display for Location {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", self.0)
-    }
-}
-
-#[derive(Component, Default, Debug)]
-struct Anchor(f32, f32);
-
-impl From<&Anchor> for Vec3 {
-    fn from(a: &Anchor) -> Self {
-        Vec3 {
-            x: a.0,
-            y: a.1,
-            z: 0.,
-        }
-    }
-}
-
-#[derive(Component, Default)]
-struct Size(u16);
-
-impl std::fmt::Display for Size {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", self.0)
-    }
-}
-
-#[derive(Component, Default)]
-struct Storage(u16);
-
-impl std::fmt::Display for Storage {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", self.0)
-    }
-}
-
-#[derive(Component, Default)]
-struct Price(u64);
-
-impl std::fmt::Display for Price {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", self.0)
-    }
-}
+struct Label;
 
 #[derive(Component, Default)]
 struct Station;
 
-#[derive(Bundle, Default)]
-struct VesselBundle {
-    name: Name,
-    location: Location,
-    anchor: Anchor,
-    size: Size,
-    storage: Storage,
-    price: Price,
-    slots: Slots,
-    vessel_type: Type,
-}
-struct StationTimer(Timer);
+#[derive(Component, Default)]
+struct Ship;
 
-fn spawn_station(
+#[derive(Component, Default)]
+struct Planet;
+
+#[derive(Component, Default)]
+struct Star;
+
+fn spawn_solar_system(
     mut commands: Commands,
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<ColorMaterial>>,
@@ -102,83 +37,63 @@ fn spawn_station(
 ) {
     commands
         .spawn()
-        .insert(Station)
-        .insert_bundle(VesselBundle {
-            name: Name("ISS".to_string()),
-            location: Location("Earth".to_string()),
-            size: Size(1_000),
-            storage: Storage(1_000),
-            price: Price(150_000_000_000),
-            vessel_type: Type::STATION,
-            anchor: Anchor(40., 100.),
-            ..default()
-        })
+        .insert(Star)
+        .insert(Name("Sol".to_string()))
+        .insert_bundle(SpatialBundle { ..default() })
         .insert_bundle(MaterialMesh2dBundle {
-            mesh: meshes.add(Mesh::from(shape::Quad::default())).into(),
-            transform: Transform::from_translation(Vec3::from(&Anchor(40., 100.)))
-                .with_scale(Vec3::splat(8.)),
-            material: materials.add(ColorMaterial::from(Color::GREEN)),
+            mesh: meshes
+                .add(shape::Quad::new(Vec2::new(50., 50.)).into())
+                .into(),
+            material: materials.add(ColorMaterial::from(Color::ORANGE)),
+            transform: Transform::from_translation(Vec3::new(0., 0., 0.)),
             ..default()
         })
-        .with_children(|parent| {
-            parent.spawn_bundle(Text2dBundle {
-                text: Text::from_section(
-                    "ISS".to_string(),
-                    TextStyle {
-                        // font_size: 3.0,
-                        font: asset_server.load("fonts/FiraCode-Retina.ttf"),
-                        color: Color::WHITE,
-                        ..default()
-                    },
-                ),
-                transform: Transform::default(),
-                ..default()
-            });
-        });
-}
-
-#[derive(Component, Default)]
-struct Heading(Option<(f64, f64, f64)>);
-
-impl std::fmt::Display for Heading {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self.0 {
-            Some((a, b, c)) => write!(f, "({}, {}, {})", a, b, c),
-            None => write!(f, "Currently docked"),
-        }
-    }
-}
-
-#[derive(Component, Default)]
-struct Docked(bool);
-
-#[derive(Bundle, Default)]
-struct ShipBundle {
-    heading: Heading,
-    docked: Docked,
-}
-
-#[derive(Component, Default)]
-struct Ship;
-
-struct ShipTimer(Timer);
-
-fn spawn_ship(mut commands: Commands) {
-    commands
-        .spawn()
-        .insert(Ship)
-        .insert_bundle(ShipBundle {
-            heading: Heading(None),
-            docked: Docked(false),
-        })
-        .insert_bundle(VesselBundle {
-            name: Name("Space Shuttle".to_string()),
-            location: Location("ISS".to_string()),
-            size: Size(965),
-            storage: Storage(29_000),
-            price: Price(1_700_000_000),
-            vessel_type: Type::SHIP,
-            ..default()
+        .with_children(|star| {
+            star.spawn()
+                .insert(Planet)
+                .insert(Name("Earth".to_string()))
+                .insert_bundle(SpatialBundle { ..default() })
+                .insert_bundle(MaterialMesh2dBundle {
+                    mesh: meshes
+                        .add(shape::Quad::new(Vec2::new(10., 10.)).into())
+                        .into(),
+                    material: materials.add(ColorMaterial::from(Color::BLUE)),
+                    transform: Transform::from_translation(Vec3::new(100., 0., 0.)),
+                    ..default()
+                })
+                .insert(Orbiting { speed: 0.001 })
+                .with_children(|planet| {
+                    planet
+                        .spawn()
+                        .insert(Station)
+                        .insert(Name("ISS".to_string()))
+                        .insert_bundle(SpatialBundle { ..default() })
+                        .insert_bundle(MaterialMesh2dBundle {
+                            mesh: meshes
+                                .add(shape::Quad::new(Vec2::new(5., 5.)).into())
+                                .into(),
+                            material: materials.add(ColorMaterial::from(Color::GRAY)),
+                            transform: Transform::from_translation(Vec3::new(25., 0., 0.)),
+                            ..default()
+                        })
+                        .insert(Orbiting { speed: 0.01 })
+                        .insert(Label)
+                        .with_children(|station| {
+                            station.spawn_bundle(Text2dBundle {
+                                text: Text::from_section(
+                                    "ISS",
+                                    TextStyle {
+                                        font: asset_server.load("fonts/FiraCode-Retina.ttf"),
+                                        font_size: 16.0,
+                                        color: Color::WHITE,
+                                    },
+                                )
+                                .with_alignment(TextAlignment::CENTER),
+                                transform: Transform::from_translation(Vec3::new(5.0, 0.0, 0.0)),
+                                ..default()
+                            });
+                        });
+                });
         });
 }
 
@@ -186,72 +101,26 @@ fn spawn_camera(mut commands: Commands) {
     commands.spawn_bundle(Camera2dBundle::default());
 }
 
-fn redraw_stations(mut query: Query<&mut Transform, (With<Station>, Without<Text>)>) {
-    for mut transform in query.iter_mut() {
-        transform.rotate_around(Vec3::default(), Quat::from_rotation_z(0.01));
+fn draw_orbiting(mut query: Query<(&mut Transform, &Orbiting)>) {
+    for (mut transform, orbiting) in query.iter_mut() {
+        transform.rotate_around(Vec3::default(), Quat::from_rotation_z(orbiting.speed));
+        transform.rotate_local_z(-orbiting.speed);
     }
 }
 
-fn print_stations(
-    time: Res<Time>,
-    mut timer: ResMut<StationTimer>,
-    query: Query<(&Name, &Location, &Size, &Storage, &Price, &Slots), With<Station>>,
-) {
-    if timer.0.tick(time.delta()).just_finished() {
-        for (name, location, size, storage, price, slots) in query.iter() {
-            println!(
-                "Station {} orbiting {} with size {} and storage {}, costs {} and has {} slots",
-                name, location, size, storage, price, slots
-            )
-        }
-    }
-}
-
-fn print_ships(
-    time: Res<Time>,
-    mut timer: ResMut<ShipTimer>,
-    query: Query<
-        (
-            &Name,
-            &Location,
-            &Size,
-            &Storage,
-            &Price,
-            &Slots,
-            &Heading,
-            &Docked,
-        ),
-        With<Ship>,
-    >,
-) {
-    if timer.0.tick(time.delta()).just_finished() {
-        for (name, location, size, storage, price, slots, heading, docked) in query.iter() {
-            if docked.0 {
-                println!(
-                    "Ship {} last docked at station {} with heading {}, size {} and storage {}, costs {} and has {} slots",
-                    name, location, heading, size, storage, price, slots
-                )
-            } else {
-                println!(
-                    "Ship {} docked with station {} with size {} and storage {}, costs {} and has {} slots",
-                    name, location, size, storage, price, slots
-                )
-            }
-        }
-    }
+fn draw_label(mut text_query: Query<(&mut Transform, &GlobalTransform), With<Text>>) {
+    // for (mut transform, global)in text_query.iter_mut() {
+    //     println!("{:?}", global);
+    // }
 }
 
 fn main() {
     App::new()
         .insert_resource(ClearColor(Color::BLACK))
         .add_plugins(DefaultPlugins)
-        .insert_resource(StationTimer(Timer::from_seconds(0.0, false)))
-        .insert_resource(ShipTimer(Timer::from_seconds(0.0, false)))
         .add_startup_system(spawn_camera)
-        .add_startup_system(spawn_station)
-        .add_startup_system(spawn_ship)
-        .add_system(redraw_stations)
-        .add_system(print_stations)
-        .add_system(print_ships)
+        .add_startup_system(spawn_solar_system)
+        .add_system(draw_orbiting)
+        .add_system(draw_label)
         .run();
 }
