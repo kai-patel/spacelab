@@ -1,11 +1,12 @@
 use bevy::{prelude::*, sprite::MaterialMesh2dBundle};
+use bevy_inspector_egui::{WorldInspectorPlugin, Inspectable, RegisterInspectable};
 
-#[derive(Component)]
+#[derive(Inspectable, Component)]
 struct Orbiting {
     speed: f32,
 }
 
-#[derive(Component, Default)]
+#[derive(Inspectable, Component, Default)]
 struct Name(String);
 
 impl std::fmt::Display for Name {
@@ -112,6 +113,9 @@ fn main() {
     App::new()
         .insert_resource(ClearColor(Color::BLACK))
         .add_plugins(DefaultPlugins)
+        .add_plugin(WorldInspectorPlugin::new())
+        .register_inspectable::<Orbiting>()
+        .register_inspectable::<Name>()
         .add_startup_system(spawn_camera)
         .add_startup_system(spawn_solar_system)
         .add_system(draw_orbiting)
