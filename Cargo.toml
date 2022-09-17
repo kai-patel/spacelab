@@ -8,6 +8,8 @@ edition = "2021"
 [dependencies]
 bevy = "0.8.1"
 bevy-inspector-egui = "0.12.1"
+bevy_pancam = "0.6.1"
+leafwing-input-manager = "0.5.2"
 
 [profile.dev]
 opt-level = 1
