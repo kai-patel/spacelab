@@ -1,6 +1,18 @@
 use bevy::{prelude::*, sprite::MaterialMesh2dBundle};
 use bevy_inspector_egui::{Inspectable, RegisterInspectable, WorldInspectorPlugin};
 use bevy_pancam::*;
+use leafwing_input_manager::prelude::*;
+
+#[derive(Actionlike, PartialEq, Eq, Clone, Copy, Hash, Debug)]
+enum Action {
+    Thrust,
+    Brake,
+    RotateLeft,
+    RotateRight,
+    Left,
+    Right,
+    ToggleEngine,
+}
 
 #[derive(Inspectable, Component)]
 struct Orbiting {
@@ -23,7 +35,9 @@ struct Label;
 struct Station;
 
 #[derive(Component, Default)]
-struct Ship;
+struct Ship {
+    primary: bool,
+}
 
 #[derive(Component, Default)]
 struct Planet;
@@ -97,7 +111,13 @@ fn spawn_solar_system(
                         });
                 });
         });
+}
 
+fn spawn_ship(
+    mut commands: Commands,
+    mut meshes: ResMut<Assets<Mesh>>,
+    mut materials: ResMut<Assets<ColorMaterial>>,
+) {
     commands
         .spawn_bundle(MaterialMesh2dBundle {
             mesh: meshes
@@ -107,7 +127,22 @@ fn spawn_solar_system(
             transform: Transform::from_translation(Vec3::new(50., 0., 0.)),
             ..default()
         })
-        .insert(Ship);
+        .insert(Ship {
+            primary: true,
+            d_engine: 4.0,
+            d_thruster: 1.0,
+        })
+        .insert_bundle(InputManagerBundle::<Action> {
+            action_state: ActionState::default(),
+            input_map: InputMap::new([
+                (KeyCode::W, Action::Thrust),
+                (KeyCode::S, Action::Brake),
+                (KeyCode::A, Action::RotateLeft),
+                (KeyCode::D, Action::RotateRight),
+                (KeyCode::Comma, Action::Left),
+                (KeyCode::Period, Action::Right),
+            ]),
+        });
 }
 
 fn spawn_camera(mut commands: Commands) {
@@ -120,6 +155,24 @@ fn spawn_camera(mut commands: Commands) {
             min_scale: 1.,
             max_scale: Some(40.),
         });
+}
+
+fn handle_actions(
+    query: Query<&ActionState<Action>, With<Ship>>,
+    mut ship_query: Query<(&mut Transform, &Ship)>,
+) {
+    let action_state = query.single();
+
+    for (mut transform, _) in ship_query.iter_mut().filter(|(_, b)| b.primary) {
+        if action_state.pressed(Action::Left) {
+
+            transform.translation += Vec3::new(-10.0, 0.0, 0.0);
+        }
+
+        if action_state.pressed(Action::Right) {
+            transform.translation += Vec3::new(10.0, 0.0, 0.0);
+        }
+    }
 }
 
 fn draw_orbiting(mut query: Query<(&mut Transform, &Orbiting)>) {
@@ -135,10 +188,13 @@ fn main() {
         .add_plugins(DefaultPlugins)
         .add_plugin(WorldInspectorPlugin::new())
         .add_plugin(PanCamPlugin::default())
+        .add_plugin(InputManagerPlugin::<Action>::default())
         .register_inspectable::<Orbiting>()
         .register_inspectable::<Name>()
         .add_startup_system(spawn_camera)
         .add_startup_system(spawn_solar_system)
+        .add_startup_system(spawn_ship)
         .add_system(draw_orbiting)
+        .add_system(handle_actions)
         .run();
 }
