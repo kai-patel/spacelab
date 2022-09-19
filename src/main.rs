@@ -1,6 +1,7 @@
 use bevy::{prelude::*, sprite::MaterialMesh2dBundle};
 use bevy_inspector_egui::{Inspectable, RegisterInspectable, WorldInspectorPlugin};
 use bevy_pancam::*;
+use heron::prelude::*;
 use leafwing_input_manager::prelude::*;
 
 #[derive(Actionlike, PartialEq, Eq, Clone, Copy, Hash, Debug)]
@@ -121,15 +122,21 @@ fn spawn_ship(
     commands
         .spawn_bundle(MaterialMesh2dBundle {
             mesh: meshes
-                .add(shape::Quad::new(Vec2::new(3., 3.)).into())
+                .add(shape::Quad::new(Vec2::new(6., 6.)).into())
                 .into(),
             material: materials.add(ColorMaterial::from(Color::PURPLE)),
             transform: Transform::from_translation(Vec3::new(50., 0., 0.)),
             ..default()
         })
-        .insert(Ship {
-            primary: true,
+        .insert(Ship { primary: true })
+        .insert(RigidBody::Dynamic)
+        .insert(CollisionShape::Cuboid {
+            half_extends: Vec3::splat(3.0),
+            border_radius: None,
         })
+        .insert(Velocity::default())
+        .insert(Acceleration::default())
+        .insert(RotationConstraints::lock())
         .insert_bundle(InputManagerBundle::<Action> {
             action_state: ActionState::default(),
             input_map: InputMap::new([
@@ -157,18 +164,35 @@ fn spawn_camera(mut commands: Commands) {
 
 fn handle_actions(
     query: Query<&ActionState<Action>, With<Ship>>,
-    mut ship_query: Query<(&mut Transform, &Ship)>,
+    mut ship_query: Query<(&mut Velocity, &Acceleration, &mut Transform, &Ship)>,
 ) {
     let action_state = query.single();
 
-    for (mut transform, _) in ship_query.iter_mut().filter(|(_, b)| b.primary) {
+    for (mut velocity, _, mut transform, _) in
+        ship_query.iter_mut().filter(|(_, _, _, b)| b.primary)
+    {
         if action_state.pressed(Action::Left) {
-
-            transform.translation += Vec3::new(-10.0, 0.0, 0.0);
+            velocity.linear += transform.left() * 0.001;
         }
 
         if action_state.pressed(Action::Right) {
-            transform.translation += Vec3::new(10.0, 0.0, 0.0);
+            velocity.linear += transform.right() * 0.001;
+        }
+
+        if action_state.pressed(Action::Thrust) {
+            velocity.linear += transform.up() * 0.05;
+        }
+
+        if action_state.pressed(Action::Brake) {
+            velocity.linear *= 0.95;
+        }
+
+        if action_state.pressed(Action::RotateLeft) {
+            transform.rotate_local_z(0.01 * std::f32::consts::PI);
+        }
+
+        if action_state.pressed(Action::RotateRight) {
+            transform.rotate_local_z(-0.01 * std::f32::consts::PI);
         }
     }
 }
@@ -187,6 +211,7 @@ fn main() {
         .add_plugin(WorldInspectorPlugin::new())
         .add_plugin(PanCamPlugin::default())
         .add_plugin(InputManagerPlugin::<Action>::default())
+        .add_plugin(PhysicsPlugin::default())
         .register_inspectable::<Orbiting>()
         .register_inspectable::<Name>()
         .add_startup_system(spawn_camera)
