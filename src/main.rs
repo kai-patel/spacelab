@@ -1,5 +1,6 @@
 use bevy::{prelude::*, sprite::MaterialMesh2dBundle};
 use bevy_inspector_egui::{Inspectable, RegisterInspectable, WorldInspectorPlugin};
+use bevy_pancam::*;
 
 #[derive(Inspectable, Component)]
 struct Orbiting {
@@ -96,10 +97,29 @@ fn spawn_solar_system(
                         });
                 });
         });
+
+    commands
+        .spawn_bundle(MaterialMesh2dBundle {
+            mesh: meshes
+                .add(shape::Quad::new(Vec2::new(3., 3.)).into())
+                .into(),
+            material: materials.add(ColorMaterial::from(Color::PURPLE)),
+            transform: Transform::from_translation(Vec3::new(50., 0., 0.)),
+            ..default()
+        })
+        .insert(Ship);
 }
 
 fn spawn_camera(mut commands: Commands) {
-    commands.spawn_bundle(Camera2dBundle::default());
+    commands
+        .spawn_bundle(Camera2dBundle::default())
+        .insert(PanCam {
+            grab_buttons: vec![MouseButton::Left, MouseButton::Middle],
+            enabled: true,
+            zoom_to_cursor: true,
+            min_scale: 1.,
+            max_scale: Some(40.),
+        });
 }
 
 fn draw_orbiting(mut query: Query<(&mut Transform, &Orbiting)>) {
@@ -114,6 +134,7 @@ fn main() {
         .insert_resource(ClearColor(Color::BLACK))
         .add_plugins(DefaultPlugins)
         .add_plugin(WorldInspectorPlugin::new())
+        .add_plugin(PanCamPlugin::default())
         .register_inspectable::<Orbiting>()
         .register_inspectable::<Name>()
         .add_startup_system(spawn_camera)
