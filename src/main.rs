@@ -1,6 +1,7 @@
 use bevy::{prelude::*, sprite::MaterialMesh2dBundle};
 use bevy_inspector_egui::{Inspectable, RegisterInspectable, WorldInspectorPlugin};
 use bevy_pancam::*;
+use bevy_prototype_lyon::prelude::*;
 use heron::prelude::*;
 use leafwing_input_manager::prelude::*;
 
@@ -114,20 +115,20 @@ fn spawn_solar_system(
         });
 }
 
-fn spawn_ship(
-    mut commands: Commands,
-    mut meshes: ResMut<Assets<Mesh>>,
-    mut materials: ResMut<Assets<ColorMaterial>>,
-) {
+fn spawn_ship(mut commands: Commands) {
     commands
-        .spawn_bundle(MaterialMesh2dBundle {
-            mesh: meshes
-                .add(shape::Quad::new(Vec2::new(6., 6.)).into())
-                .into(),
-            material: materials.add(ColorMaterial::from(Color::PURPLE)),
-            transform: Transform::from_translation(Vec3::new(50., 0., 0.)),
-            ..default()
-        })
+        .spawn_bundle(GeometryBuilder::build_as(
+            &shapes::RegularPolygon {
+                sides: 3,
+                feature: shapes::RegularPolygonFeature::Radius(3.),
+                ..shapes::RegularPolygon::default()
+            },
+            DrawMode::Outlined {
+                fill_mode: FillMode::color(Color::DARK_GRAY),
+                outline_mode: StrokeMode::new(Color::WHITE, 1.0),
+            },
+            Transform::from_translation(Vec3::new(50.0, 0., 0.)),
+        ))
         .insert(Ship { primary: true })
         .insert(RigidBody::Dynamic)
         .insert(CollisionShape::Cuboid {
@@ -172,15 +173,15 @@ fn handle_actions(
         ship_query.iter_mut().filter(|(_, _, _, b)| b.primary)
     {
         if action_state.pressed(Action::Left) {
-            velocity.linear += transform.left() * 0.001;
+            velocity.linear += transform.left() * 0.01;
         }
 
         if action_state.pressed(Action::Right) {
-            velocity.linear += transform.right() * 0.001;
+            velocity.linear += transform.right() * 0.01;
         }
 
         if action_state.pressed(Action::Thrust) {
-            velocity.linear += transform.up() * 0.05;
+            velocity.linear += transform.up() * 0.1;
         }
 
         if action_state.pressed(Action::Brake) {
@@ -212,6 +213,7 @@ fn main() {
         .add_plugin(PanCamPlugin::default())
         .add_plugin(InputManagerPlugin::<Action>::default())
         .add_plugin(PhysicsPlugin::default())
+        .add_plugin(ShapePlugin)
         .register_inspectable::<Orbiting>()
         .register_inspectable::<Name>()
         .add_startup_system(spawn_camera)
