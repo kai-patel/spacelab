@@ -129,8 +129,6 @@ fn spawn_ship(
         })
         .insert(Ship {
             primary: true,
-            d_engine: 4.0,
-            d_thruster: 1.0,
         })
         .insert_bundle(InputManagerBundle::<Action> {
             action_state: ActionState::default(),
