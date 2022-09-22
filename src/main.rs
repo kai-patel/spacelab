@@ -16,7 +16,7 @@ enum Action {
     ToggleEngine,
 }
 
-#[derive(Inspectable, Component)]
+#[derive(Inspectable, Component, Default)]
 struct Orbiting {
     speed: f32,
 }
@@ -198,6 +198,59 @@ fn handle_actions(
     }
 }
 
+fn spawn_orbital_paths(
+    mut commands: Commands,
+    query: Query<(Option<&Parent>, &GlobalTransform), With<Orbiting>>,
+    parent_transform_query: Query<&GlobalTransform>,
+    parent_orbiting_query: Query<&Orbiting>,
+) {
+    println!("Called spawn fn");
+    for (parent, transform) in query.iter() {
+        println!("Spawning orbit");
+
+        let c = if let Some(p) = parent {
+            let parent_transform = parent_transform_query
+                .get(p.get())
+                .expect("Expected parent entity to have a GlobalTransform")
+                .translation();
+            Vec2::new(parent_transform.x, parent_transform.y)
+        } else {
+            Vec2::splat(0.)
+        };
+
+        if let Some(p) = parent {
+            commands.entity(p.get()).add_children(|par| {
+                par.spawn_bundle(GeometryBuilder::build_as(
+                    &shapes::Circle {
+                        radius: transform.translation().distance(Vec3::new(c.x, c.y, -1.0)),
+                        center: c,
+                    },
+                    DrawMode::Stroke(StrokeMode::new(Color::WHITE, 2.)),
+                    Transform::default(),
+                ))
+                .insert(Orbiting {
+                    speed: if let Ok(orbiting) = parent_orbiting_query.get(p.get()) {
+                        orbiting.speed
+                    } else {
+                        0.
+                    },
+                });
+            });
+        } else {
+            commands.spawn_bundle(GeometryBuilder::build_as(
+                &shapes::Circle {
+                    radius: transform.translation().distance(Vec3::new(c.x, c.y, -1.0)),
+                    center: c,
+                },
+                DrawMode::Stroke(StrokeMode::new(Color::WHITE, 2.)),
+                Transform::default(),
+            ));
+        }
+
+        println!("Orbit spawned!");
+    }
+}
+
 fn draw_orbiting(mut query: Query<(&mut Transform, &Orbiting)>) {
     for (mut transform, orbiting) in query.iter_mut() {
         transform.rotate_around(Vec3::default(), Quat::from_rotation_z(orbiting.speed));
@@ -219,6 +272,7 @@ fn main() {
         .add_startup_system(spawn_camera)
         .add_startup_system(spawn_solar_system)
         .add_startup_system(spawn_ship)
+        .add_startup_system_to_stage(StartupStage::PostStartup, spawn_orbital_paths)
         .add_system(draw_orbiting)
         .add_system(handle_actions)
         .run();
