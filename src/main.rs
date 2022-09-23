@@ -13,7 +13,7 @@ enum Action {
     RotateRight,
     Left,
     Right,
-    ToggleEngine,
+    Dock,
 }
 
 #[derive(Inspectable, Component, Default)]
@@ -150,7 +150,9 @@ fn spawn_ship(mut commands: Commands) {
                 (KeyCode::D, Action::RotateRight),
                 (KeyCode::Comma, Action::Left),
                 (KeyCode::Period, Action::Right),
-            ]),
+            ])
+            .insert_chord([KeyCode::LShift, KeyCode::D], Action::Dock)
+            .build(),
         });
     debug!("Ship spawned");
 }
@@ -200,6 +202,10 @@ fn handle_actions(
 
         if action_state.pressed(Action::RotateRight) {
             transform.rotate_local_z(-0.01 * std::f32::consts::PI);
+        }
+
+        if action_state.just_pressed(Action::Dock) {
+            debug!("Action::Dock");
         }
     }
 }
