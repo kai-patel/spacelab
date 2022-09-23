@@ -1,4 +1,4 @@
-use bevy::{prelude::*, sprite::MaterialMesh2dBundle};
+use bevy::{log::LogSettings, prelude::*, sprite::MaterialMesh2dBundle};
 use bevy_inspector_egui::{Inspectable, RegisterInspectable, WorldInspectorPlugin};
 use bevy_pancam::*;
 use bevy_prototype_lyon::prelude::*;
@@ -53,6 +53,7 @@ fn spawn_solar_system(
     mut materials: ResMut<Assets<ColorMaterial>>,
     asset_server: Res<AssetServer>,
 ) {
+    debug!("spawn_solar_system");
     commands
         .spawn()
         .insert(Star)
@@ -113,9 +114,11 @@ fn spawn_solar_system(
                         });
                 });
         });
+    debug!("Solar system spawned");
 }
 
 fn spawn_ship(mut commands: Commands) {
+    debug!("spawn_ship");
     commands
         .spawn_bundle(GeometryBuilder::build_as(
             &shapes::RegularPolygon {
@@ -149,9 +152,11 @@ fn spawn_ship(mut commands: Commands) {
                 (KeyCode::Period, Action::Right),
             ]),
         });
+    debug!("Ship spawned");
 }
 
 fn spawn_camera(mut commands: Commands) {
+    debug!("Spawn camera");
     commands
         .spawn_bundle(Camera2dBundle::default())
         .insert(PanCam {
@@ -161,6 +166,7 @@ fn spawn_camera(mut commands: Commands) {
             min_scale: 1.,
             max_scale: Some(40.),
         });
+    debug!("Camera spawned");
 }
 
 fn handle_actions(
@@ -202,12 +208,11 @@ fn spawn_orbital_paths(
     mut commands: Commands,
     query: Query<(Option<&Parent>, &GlobalTransform), With<Orbiting>>,
     parent_transform_query: Query<&GlobalTransform>,
-    parent_orbiting_query: Query<&Orbiting>,
 ) {
-    println!("Called spawn fn");
+    debug!("spawn_orbital_paths");
+    // Iterate through all GlobalTransforms which Orbit
     for (parent, transform) in query.iter() {
-        println!("Spawning orbit");
-
+        // Get (x, y) global position of parent, or default to (0, 0)
         let c = if let Some(p) = parent {
             let parent_transform = parent_transform_query
                 .get(p.get())
@@ -218,37 +223,30 @@ fn spawn_orbital_paths(
             Vec2::splat(0.)
         };
 
+        // Add orbital path as child to parent of the orbiting body
         if let Some(p) = parent {
             commands.entity(p.get()).add_children(|par| {
                 par.spawn_bundle(GeometryBuilder::build_as(
                     &shapes::Circle {
-                        radius: transform.translation().distance(Vec3::new(c.x, c.y, -1.0)),
-                        center: c,
+                        radius: transform.translation().distance(Vec3::new(c.x, c.y, 0.0)),
+                        center: Vec2::splat(0.),
                     },
                     DrawMode::Stroke(StrokeMode::new(Color::WHITE, 2.)),
                     Transform::default(),
-                ))
-                .insert(Orbiting {
-                    speed: if let Ok(orbiting) = parent_orbiting_query.get(p.get()) {
-                        orbiting.speed
-                    } else {
-                        0.
-                    },
-                });
+                ));
             });
         } else {
             commands.spawn_bundle(GeometryBuilder::build_as(
                 &shapes::Circle {
                     radius: transform.translation().distance(Vec3::new(c.x, c.y, -1.0)),
-                    center: c,
+                    center: Vec2::splat(0.),
                 },
                 DrawMode::Stroke(StrokeMode::new(Color::WHITE, 2.)),
                 Transform::default(),
             ));
         }
-
-        println!("Orbit spawned!");
     }
+    debug!("Orbits spawned!");
 }
 
 fn draw_orbiting(mut query: Query<(&mut Transform, &Orbiting)>) {
@@ -261,6 +259,10 @@ fn draw_orbiting(mut query: Query<(&mut Transform, &Orbiting)>) {
 fn main() {
     App::new()
         .insert_resource(ClearColor(Color::BLACK))
+        .insert_resource(LogSettings {
+            filter: "info,wgpu_core=warn,wgpu_hal=warn,spacelab=debug".into(),
+            level: bevy::log::Level::DEBUG,
+        })
         .add_plugins(DefaultPlugins)
         .add_plugin(WorldInspectorPlugin::new())
         .add_plugin(PanCamPlugin::default())
@@ -269,7 +271,7 @@ fn main() {
         .add_plugin(ShapePlugin)
         .register_inspectable::<Orbiting>()
         .register_inspectable::<Name>()
-        .add_startup_system(spawn_camera)
+        .add_startup_system_to_stage(StartupStage::PreStartup, spawn_camera)
         .add_startup_system(spawn_solar_system)
         .add_startup_system(spawn_ship)
         .add_startup_system_to_stage(StartupStage::PostStartup, spawn_orbital_paths)
