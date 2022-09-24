@@ -47,6 +47,11 @@ struct Planet;
 #[derive(Component, Default)]
 struct Star;
 
+#[derive(Component, Default)]
+struct Dockable {
+    is_docked: bool,
+}
+
 fn spawn_solar_system(
     mut commands: Commands,
     mut meshes: ResMut<Assets<Mesh>>,
@@ -133,6 +138,7 @@ fn spawn_ship(mut commands: Commands) {
             Transform::from_translation(Vec3::new(50.0, 0., 0.)),
         ))
         .insert(Ship { primary: true })
+        .insert(Dockable { is_docked: false })
         .insert(RigidBody::Dynamic)
         .insert(CollisionShape::Cuboid {
             half_extends: Vec3::splat(3.0),
@@ -173,39 +179,42 @@ fn spawn_camera(mut commands: Commands) {
 
 fn handle_actions(
     query: Query<&ActionState<Action>, With<Ship>>,
-    mut ship_query: Query<(&mut Velocity, &Acceleration, &mut Transform, &Ship)>,
+    mut ship_query: Query<(&mut Velocity, &mut Dockable, &mut Transform, &Ship)>,
 ) {
     let action_state = query.single();
 
-    for (mut velocity, _, mut transform, _) in
+    for (mut velocity, mut dockable, mut transform, _) in
         ship_query.iter_mut().filter(|(_, _, _, b)| b.primary)
     {
-        if action_state.pressed(Action::Left) {
-            velocity.linear += transform.left() * 0.01;
-        }
+        if !dockable.is_docked {
+            if action_state.pressed(Action::Left) {
+                velocity.linear += transform.left() * 0.01;
+            }
 
-        if action_state.pressed(Action::Right) {
-            velocity.linear += transform.right() * 0.01;
-        }
+            if action_state.pressed(Action::Right) {
+                velocity.linear += transform.right() * 0.01;
+            }
 
-        if action_state.pressed(Action::Thrust) {
-            velocity.linear += transform.up() * 0.1;
-        }
+            if action_state.pressed(Action::Thrust) {
+                velocity.linear += transform.up() * 0.1;
+            }
 
-        if action_state.pressed(Action::Brake) {
-            velocity.linear *= 0.95;
-        }
+            if action_state.pressed(Action::Brake) {
+                velocity.linear *= 0.95;
+            }
 
-        if action_state.pressed(Action::RotateLeft) {
-            transform.rotate_local_z(0.01 * std::f32::consts::PI);
-        }
+            if action_state.pressed(Action::RotateLeft) {
+                transform.rotate_local_z(0.01 * std::f32::consts::PI);
+            }
 
-        if action_state.pressed(Action::RotateRight) {
-            transform.rotate_local_z(-0.01 * std::f32::consts::PI);
+            if action_state.pressed(Action::RotateRight) {
+                transform.rotate_local_z(-0.01 * std::f32::consts::PI);
+            }
         }
 
         if action_state.just_pressed(Action::Dock) {
-            debug!("Action::Dock");
+            dockable.is_docked = !dockable.is_docked;
+            debug!("Docked: {:?}", dockable.is_docked);
         }
     }
 }
