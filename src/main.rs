@@ -296,7 +296,7 @@ fn main() {
             filter: "info,wgpu_core=warn,wgpu_hal=warn,spacelab=debug".into(),
             level: bevy::log::Level::DEBUG,
         })
-        .insert_resource(WinitSettings::desktop_app())
+        .insert_resource(WinitSettings::game())
         .add_plugins(DefaultPlugins)
         .add_plugin(WorldInspectorPlugin::new())
         .add_plugin(PanCamPlugin::default())
