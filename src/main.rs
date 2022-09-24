@@ -1,4 +1,4 @@
-use bevy::{log::LogSettings, prelude::*, sprite::MaterialMesh2dBundle};
+use bevy::{log::LogSettings, prelude::*, sprite::MaterialMesh2dBundle, winit::WinitSettings};
 use bevy_inspector_egui::{Inspectable, RegisterInspectable, WorldInspectorPlugin};
 use bevy_pancam::*;
 use bevy_prototype_lyon::prelude::*;
@@ -177,6 +177,24 @@ fn spawn_camera(mut commands: Commands) {
     debug!("Camera spawned");
 }
 
+fn setup_ui(mut commands: Commands) {
+    commands.spawn_bundle(NodeBundle {
+        style: Style {
+            size: Size::new(Val::Percent(100.0), Val::Percent(20.0)),
+            position_type: PositionType::Absolute,
+            position: UiRect {
+                left: Val::Px(0.0),
+                bottom: Val::Px(0.0),
+                ..default()
+            },
+            border: UiRect::all(Val::Px(20.0)),
+            ..default()
+        },
+        color: Color::rgb(0.4, 0.4, 0.4).into(),
+        ..default()
+    });
+}
+
 fn handle_actions(
     query: Query<&ActionState<Action>, With<Ship>>,
     mut ship_query: Query<(&mut Velocity, &mut Dockable, &mut Transform, &Ship)>,
@@ -278,6 +296,7 @@ fn main() {
             filter: "info,wgpu_core=warn,wgpu_hal=warn,spacelab=debug".into(),
             level: bevy::log::Level::DEBUG,
         })
+        .insert_resource(WinitSettings::desktop_app())
         .add_plugins(DefaultPlugins)
         .add_plugin(WorldInspectorPlugin::new())
         .add_plugin(PanCamPlugin::default())
@@ -287,6 +306,7 @@ fn main() {
         .register_inspectable::<Orbiting>()
         .register_inspectable::<Name>()
         .add_startup_system_to_stage(StartupStage::PreStartup, spawn_camera)
+        .add_startup_system_to_stage(StartupStage::PreStartup, setup_ui)
         .add_startup_system(spawn_solar_system)
         .add_startup_system(spawn_ship)
         .add_startup_system_to_stage(StartupStage::PostStartup, spawn_orbital_paths)
