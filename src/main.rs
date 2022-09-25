@@ -177,22 +177,79 @@ fn spawn_camera(mut commands: Commands) {
     debug!("Camera spawned");
 }
 
-fn setup_ui(mut commands: Commands) {
-    commands.spawn_bundle(NodeBundle {
-        style: Style {
-            size: Size::new(Val::Percent(100.0), Val::Percent(20.0)),
-            position_type: PositionType::Absolute,
-            position: UiRect {
-                left: Val::Px(0.0),
-                bottom: Val::Px(0.0),
+fn setup_ui(mut commands: Commands, asset_server: Res<AssetServer>) {
+    commands
+        .spawn_bundle(NodeBundle {
+            style: Style {
+                display: Display::Flex,
+                flex_direction: FlexDirection::Row,
+                justify_content: JustifyContent::SpaceBetween,
+                size: Size::new(Val::Percent(100.0), Val::Percent(20.0)),
+                position_type: PositionType::Absolute,
+                position: UiRect {
+                    left: Val::Px(0.0),
+                    bottom: Val::Px(0.0),
+                    ..default()
+                },
+                border: UiRect::all(Val::Px(20.0)),
                 ..default()
             },
-            border: UiRect::all(Val::Px(20.0)),
+            color: Color::rgb(0.4, 0.4, 0.4).into(),
             ..default()
-        },
-        color: Color::rgb(0.4, 0.4, 0.4).into(),
-        ..default()
-    });
+        })
+        .with_children(|parent| {
+            parent
+                .spawn_bundle(NodeBundle {
+                    style: Style {
+                        size: Size::new(Val::Percent(100.0), Val::Percent(100.0)),
+                        display: Display::Flex,
+                        ..default()
+                    },
+                    color: Color::GREEN.into(),
+                    ..default()
+                })
+                .with_children(|parent| {
+                    parent
+                        .spawn_bundle(ButtonBundle {
+                            style: Style {
+                                size: Size::new(Val::Percent(100.0), Val::Percent(100.0)),
+                                ..default()
+                            },
+                            interaction: Interaction::Clicked,
+                            ..default()
+                        })
+                        .insert_bundle(TextBundle::from_section(
+                            "Cargo",
+                            TextStyle {
+                                font: asset_server.load("fonts/FiraCode-Retina.ttf"),
+                                font_size: 24.0,
+                                color: Color::WHITE,
+                            },
+                        ));
+                });
+        })
+        .with_children(|parent| {
+            parent.spawn_bundle(NodeBundle {
+                style: Style {
+                    size: Size::new(Val::Percent(100.0), Val::Percent(100.0)),
+                    display: Display::Flex,
+                    ..default()
+                },
+                color: Color::BLUE.into(),
+                ..default()
+            });
+        })
+        .with_children(|parent| {
+            parent.spawn_bundle(NodeBundle {
+                style: Style {
+                    size: Size::new(Val::Percent(100.0), Val::Percent(100.0)),
+                    display: Display::Flex,
+                    ..default()
+                },
+                color: Color::RED.into(),
+                ..default()
+            });
+        });
 }
 
 fn handle_actions(
