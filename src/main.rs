@@ -52,6 +52,11 @@ struct Dockable {
     is_docked: bool,
 }
 
+#[derive(Component, Default)]
+struct DisplayCargo {
+    is_displayed: bool,
+}
+
 fn spawn_solar_system(
     mut commands: Commands,
     mut meshes: ResMut<Assets<Mesh>>,
@@ -199,34 +204,29 @@ fn setup_ui(mut commands: Commands, asset_server: Res<AssetServer>) {
         })
         .with_children(|parent| {
             parent
-                .spawn_bundle(NodeBundle {
+                .spawn_bundle(ButtonBundle {
                     style: Style {
-                        size: Size::new(Val::Percent(100.0), Val::Percent(100.0)),
                         display: Display::Flex,
+                        justify_content: JustifyContent::Center,
+                        align_items: AlignItems::Center,
+                        size: Size::new(Val::Percent(100.0), Val::Percent(100.0)),
                         ..default()
                     },
+                    interaction: Interaction::Clicked,
                     color: Color::GREEN.into(),
                     ..default()
                 })
-                .with_children(|parent| {
-                    parent
-                        .spawn_bundle(ButtonBundle {
-                            style: Style {
-                                size: Size::new(Val::Percent(100.0), Val::Percent(100.0)),
-                                ..default()
-                            },
-                            interaction: Interaction::Clicked,
-                            ..default()
-                        })
-                        .insert_bundle(TextBundle::from_section(
-                            "Cargo",
-                            TextStyle {
-                                font: asset_server.load("fonts/FiraCode-Retina.ttf"),
-                                font_size: 24.0,
-                                color: Color::WHITE,
-                            },
-                        ));
-                });
+                .insert(DisplayCargo {
+                    is_displayed: false,
+                })
+                .insert_bundle(TextBundle::from_section(
+                    "Cargo",
+                    TextStyle {
+                        font: asset_server.load("fonts/FiraCode-Retina.ttf"),
+                        font_size: 36.0,
+                        color: Color::PURPLE,
+                    },
+                ));
         })
         .with_children(|parent| {
             parent.spawn_bundle(NodeBundle {
@@ -250,6 +250,21 @@ fn setup_ui(mut commands: Commands, asset_server: Res<AssetServer>) {
                 ..default()
             });
         });
+}
+
+fn handle_ui_click(
+    mut query: Query<
+        (&Interaction, &mut DisplayCargo, &mut UiColor),
+        (Changed<Interaction>, With<Button>),
+    >,
+) {
+    for (interaction, mut display_cargo, mut color) in query.iter_mut() {
+        if *interaction == Interaction::Clicked {
+            display_cargo.is_displayed = !display_cargo.is_displayed;
+            *color = Color::RED.into();
+            debug!("Cargo Displayed: {}", display_cargo.is_displayed);
+        }
+    }
 }
 
 fn handle_actions(
@@ -369,5 +384,6 @@ fn main() {
         .add_startup_system_to_stage(StartupStage::PostStartup, spawn_orbital_paths)
         .add_system(draw_orbiting)
         .add_system(handle_actions)
+        .add_system(handle_ui_click)
         .run();
 }
