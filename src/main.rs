@@ -261,7 +261,10 @@ fn handle_ui_click(
     for (interaction, mut display_cargo, mut color) in query.iter_mut() {
         if *interaction == Interaction::Clicked {
             display_cargo.is_displayed = !display_cargo.is_displayed;
-            *color = Color::RED.into();
+            *color = match display_cargo.is_displayed {
+                true => Color::RED.into(),
+                false => Color::GREEN.into()
+            };
             debug!("Cargo Displayed: {}", display_cargo.is_displayed);
         }
     }
