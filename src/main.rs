@@ -5,6 +5,36 @@ use bevy_prototype_lyon::prelude::*;
 use heron::prelude::*;
 use leafwing_input_manager::prelude::*;
 
+#[derive(Default, Clone, Copy, PartialEq, Debug)]
+enum State {
+    #[default]
+    Space,
+    Cargo,
+}
+
+#[derive(Default, Debug)]
+struct UiState {
+    space: bool,
+    cargo: bool,
+    state: State,
+    last_state: State,
+}
+
+impl UiState {
+    fn new() -> Self {
+        UiState {
+            space: true,
+            ..default()
+        }
+    }
+
+    fn set_state(&mut self, new_state: State) {
+        let tmp = self.state;
+        self.last_state = tmp;
+        self.state = new_state;
+    }
+}
+
 #[derive(Actionlike, PartialEq, Eq, Clone, Copy, Hash, Debug)]
 enum Action {
     Thrust,
@@ -53,9 +83,7 @@ struct Dockable {
 }
 
 #[derive(Component, Default)]
-struct DisplayCargo {
-    is_displayed: bool,
-}
+struct DisplayCargo;
 
 fn spawn_solar_system(
     mut commands: Commands,
@@ -226,9 +254,7 @@ fn setup_ui(mut commands: Commands, asset_server: Res<AssetServer>) {
                         },
                     ));
                 })
-                .insert(DisplayCargo {
-                    is_displayed: false,
-                });
+                .insert(DisplayCargo);
         })
         .with_children(|parent| {
             parent.spawn_bundle(NodeBundle {
@@ -255,19 +281,23 @@ fn setup_ui(mut commands: Commands, asset_server: Res<AssetServer>) {
 }
 
 fn handle_ui_click(
-    mut query: Query<
-        (&Interaction, &mut DisplayCargo, &mut UiColor),
-        (Changed<Interaction>, With<Button>),
-    >,
+    mut query: Query<(&Interaction, &mut UiColor), (Changed<Interaction>, With<Button>)>,
+    mut ui_state: ResMut<UiState>,
 ) {
-    for (interaction, mut display_cargo, mut color) in query.iter_mut() {
+    for (interaction, mut color) in query.iter_mut() {
         if *interaction == Interaction::Clicked {
-            display_cargo.is_displayed = !display_cargo.is_displayed;
-            *color = match display_cargo.is_displayed {
-                true => Color::RED.into(),
-                false => Color::GREEN.into(),
+            let last_state = ui_state.last_state;
+            ui_state.cargo = !ui_state.cargo;
+            match ui_state.state {
+                State::Cargo => ui_state.set_state(last_state),
+                _ => ui_state.set_state(State::Cargo),
             };
-            debug!("Cargo Displayed: {}", display_cargo.is_displayed);
+
+            *color = match ui_state.state {
+                State::Cargo => Color::RED.into(),
+                _ => Color::GREEN.into(),
+            };
+            debug!("UI State: {:?}", ui_state);
         }
     }
 }
@@ -359,10 +389,12 @@ fn spawn_orbital_paths(
     debug!("Orbits spawned!");
 }
 
-fn draw_orbiting(mut query: Query<(&mut Transform, &Orbiting)>) {
-    for (mut transform, orbiting) in query.iter_mut() {
-        transform.rotate_around(Vec3::default(), Quat::from_rotation_z(orbiting.speed));
-        transform.rotate_local_z(-orbiting.speed);
+fn draw_orbiting(mut query: Query<(&mut Transform, &Orbiting)>, ui_state: Res<UiState>) {
+    if ui_state.space {
+        for (mut transform, orbiting) in query.iter_mut() {
+            transform.rotate_around(Vec3::default(), Quat::from_rotation_z(orbiting.speed));
+            transform.rotate_local_z(-orbiting.speed);
+        }
     }
 }
 
@@ -374,6 +406,7 @@ fn main() {
             level: bevy::log::Level::DEBUG,
         })
         .insert_resource(WinitSettings::game())
+        .insert_resource(UiState::new())
         .add_plugins(DefaultPlugins)
         .add_plugin(WorldInspectorPlugin::new())
         .add_plugin(PanCamPlugin::default())
