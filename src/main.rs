@@ -216,17 +216,19 @@ fn setup_ui(mut commands: Commands, asset_server: Res<AssetServer>) {
                     color: Color::GREEN.into(),
                     ..default()
                 })
+                .with_children(|parent| {
+                    parent.spawn_bundle(TextBundle::from_section(
+                        "Cargo",
+                        TextStyle {
+                            font: asset_server.load("fonts/FiraCode-Retina.ttf"),
+                            font_size: 36.0,
+                            color: Color::PURPLE,
+                        },
+                    ));
+                })
                 .insert(DisplayCargo {
                     is_displayed: false,
-                })
-                .insert_bundle(TextBundle::from_section(
-                    "Cargo",
-                    TextStyle {
-                        font: asset_server.load("fonts/FiraCode-Retina.ttf"),
-                        font_size: 36.0,
-                        color: Color::PURPLE,
-                    },
-                ));
+                });
         })
         .with_children(|parent| {
             parent.spawn_bundle(NodeBundle {
@@ -263,7 +265,7 @@ fn handle_ui_click(
             display_cargo.is_displayed = !display_cargo.is_displayed;
             *color = match display_cargo.is_displayed {
                 true => Color::RED.into(),
-                false => Color::GREEN.into()
+                false => Color::GREEN.into(),
             };
             debug!("Cargo Displayed: {}", display_cargo.is_displayed);
         }
