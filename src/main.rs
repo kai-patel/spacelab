@@ -1,4 +1,5 @@
 use bevy::{log::LogSettings, prelude::*, sprite::MaterialMesh2dBundle, winit::WinitSettings};
+use bevy_egui::{egui, EguiContext, EguiPlugin};
 use bevy_inspector_egui::{Inspectable, RegisterInspectable, WorldInspectorPlugin};
 use bevy_pancam::*;
 use bevy_prototype_lyon::prelude::*;
@@ -302,6 +303,15 @@ fn handle_ui_click(
     }
 }
 
+fn ship_cargo_ui(mut egui_ctx: ResMut<EguiContext>, mut ui_state: ResMut<UiState>) {
+    egui::Window::new("Ship Cargo")
+        .vscroll(true)
+        .open(&mut ui_state.cargo)
+        .show(egui_ctx.ctx_mut(), |ui| {
+            ui.label("Hello World!");
+        });
+}
+
 fn handle_actions(
     query: Query<&ActionState<Action>, With<Ship>>,
     mut ship_query: Query<(&mut Velocity, &mut Dockable, &mut Transform, &Ship)>,
@@ -413,6 +423,7 @@ fn main() {
         .add_plugin(InputManagerPlugin::<Action>::default())
         .add_plugin(PhysicsPlugin::default())
         .add_plugin(ShapePlugin)
+        .add_plugin(EguiPlugin)
         .register_inspectable::<Orbiting>()
         .register_inspectable::<Name>()
         .add_startup_system_to_stage(StartupStage::PreStartup, spawn_camera)
@@ -423,5 +434,6 @@ fn main() {
         .add_system(draw_orbiting)
         .add_system(handle_actions)
         .add_system(handle_ui_click)
+        .add_system(ship_cargo_ui)
         .run();
 }
