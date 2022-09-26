@@ -282,24 +282,32 @@ fn setup_ui(mut commands: Commands, asset_server: Res<AssetServer>) {
 }
 
 fn handle_ui_click(
-    mut query: Query<(&Interaction, &mut UiColor), (Changed<Interaction>, With<Button>)>,
+    mut query: Query<
+        (&Interaction, &mut UiColor),
+        (Changed<Interaction>, With<Button>, With<DisplayCargo>),
+    >,
     mut ui_state: ResMut<UiState>,
 ) {
-    for (interaction, mut color) in query.iter_mut() {
-        if *interaction == Interaction::Clicked {
-            let last_state = ui_state.last_state;
-            ui_state.cargo = !ui_state.cargo;
-            match ui_state.state {
-                State::Cargo => ui_state.set_state(last_state),
-                _ => ui_state.set_state(State::Cargo),
-            };
+    let (interaction, mut color) = match query.get_single_mut() {
+        Ok(x) => x,
+        _ => return,
+    };
 
-            *color = match ui_state.state {
-                State::Cargo => Color::RED.into(),
-                _ => Color::GREEN.into(),
-            };
-            debug!("UI State: {:?}", ui_state);
-        }
+    if *interaction == Interaction::Clicked {
+        let last_state = ui_state.last_state;
+        ui_state.cargo = !ui_state.cargo;
+        match ui_state.state {
+            State::Cargo => ui_state.set_state(last_state),
+            _ => ui_state.set_state(State::Cargo),
+        };
+    }
+
+    if ui_state.is_changed() {
+        *color = match ui_state.cargo {
+            true => Color::RED.into(),
+            false => Color::GREEN.into(),
+        };
+        debug!("UI State: {:?}", ui_state);
     }
 }
 
