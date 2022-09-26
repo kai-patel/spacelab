@@ -6,19 +6,10 @@ use bevy_prototype_lyon::prelude::*;
 use heron::prelude::*;
 use leafwing_input_manager::prelude::*;
 
-#[derive(Default, Clone, Copy, PartialEq, Debug)]
-enum State {
-    #[default]
-    Space,
-    Cargo,
-}
-
 #[derive(Default, Debug)]
 struct UiState {
     space: bool,
     cargo: bool,
-    state: State,
-    last_state: State,
 }
 
 impl UiState {
@@ -27,12 +18,6 @@ impl UiState {
             space: true,
             ..default()
         }
-    }
-
-    fn set_state(&mut self, new_state: State) {
-        let tmp = self.state;
-        self.last_state = tmp;
-        self.state = new_state;
     }
 }
 
@@ -45,6 +30,7 @@ enum Action {
     Left,
     Right,
     Dock,
+    Cargo,
 }
 
 #[derive(Inspectable, Component, Default)]
@@ -190,6 +176,7 @@ fn spawn_ship(mut commands: Commands) {
                 (KeyCode::D, Action::RotateRight),
                 (KeyCode::Comma, Action::Left),
                 (KeyCode::Period, Action::Right),
+                (KeyCode::C, Action::Cargo),
             ])
             .insert_chord([KeyCode::LShift, KeyCode::D], Action::Dock)
             .build(),
@@ -282,32 +269,31 @@ fn setup_ui(mut commands: Commands, asset_server: Res<AssetServer>) {
 }
 
 fn handle_ui_click(
-    mut query: Query<
-        (&Interaction, &mut UiColor),
-        (Changed<Interaction>, With<Button>, With<DisplayCargo>),
-    >,
+    mut query: Query<&Interaction, (Changed<Interaction>, With<Button>, With<DisplayCargo>)>,
     mut ui_state: ResMut<UiState>,
 ) {
-    let (interaction, mut color) = match query.get_single_mut() {
+    let interaction = match query.get_single_mut() {
         Ok(x) => x,
         _ => return,
     };
 
     if *interaction == Interaction::Clicked {
-        let last_state = ui_state.last_state;
         ui_state.cargo = !ui_state.cargo;
-        match ui_state.state {
-            State::Cargo => ui_state.set_state(last_state),
-            _ => ui_state.set_state(State::Cargo),
-        };
+        ui_state.set_changed();
     }
+}
 
+fn handle_cargo_button_color(
+    mut query: Query<&mut UiColor, With<DisplayCargo>>,
+    ui_state: Res<UiState>,
+) {
     if ui_state.is_changed() {
-        *color = match ui_state.cargo {
-            true => Color::RED.into(),
-            false => Color::GREEN.into(),
-        };
-        debug!("UI State: {:?}", ui_state);
+        if let Ok(mut color) = query.get_single_mut() {
+            *color = match ui_state.cargo {
+                true => Color::RED.into(),
+                false => Color::GREEN.into(),
+            };
+        }
     }
 }
 
@@ -318,11 +304,14 @@ fn ship_cargo_ui(mut egui_ctx: ResMut<EguiContext>, mut ui_state: ResMut<UiState
         .show(egui_ctx.ctx_mut(), |ui| {
             ui.label("Hello World!");
         });
+
+    ui_state.set_changed();
 }
 
 fn handle_actions(
     query: Query<&ActionState<Action>, With<Ship>>,
     mut ship_query: Query<(&mut Velocity, &mut Dockable, &mut Transform, &Ship)>,
+    mut ui_state: ResMut<UiState>,
 ) {
     let action_state = query.single();
 
@@ -352,6 +341,11 @@ fn handle_actions(
 
             if action_state.pressed(Action::RotateRight) {
                 transform.rotate_local_z(-0.01 * std::f32::consts::PI);
+            }
+
+            if action_state.just_pressed(Action::Cargo) {
+                ui_state.cargo = !ui_state.cargo;
+                ui_state.set_changed();
             }
         }
 
@@ -443,5 +437,6 @@ fn main() {
         .add_system(handle_actions)
         .add_system(handle_ui_click)
         .add_system(ship_cargo_ui)
+        .add_system(handle_cargo_button_color)
         .run();
 }
