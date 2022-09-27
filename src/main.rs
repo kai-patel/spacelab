@@ -96,15 +96,18 @@ impl CargoHold {
     }
 }
 
-#[derive(Default, PartialEq, Eq, Hash)]
+#[derive(Default, Debug, PartialEq, Eq, Hash)]
 struct Item {
     name: String,
     description: String,
 }
 
 impl Item {
-    fn new(name: String, description: String) -> Self {
-        Item { name, description }
+    fn new(name: &str, description: &str) -> Self {
+        Item {
+            name: name.to_string(),
+            description: description.to_string(),
+        }
     }
 }
 
@@ -334,7 +337,17 @@ fn handle_cargo_button_color(
     }
 }
 
-fn ship_cargo_ui(mut egui_ctx: ResMut<EguiContext>, mut ui_state: ResMut<UiState>) {
+fn ship_cargo_ui(
+    mut egui_ctx: ResMut<EguiContext>,
+    mut ui_state: ResMut<UiState>,
+    mut query: Query<(&mut CargoHold, &Ship)>,
+) {
+    let (mut cargo_hold, _) = query
+        .iter_mut()
+        .filter(|(_, ship)| ship.primary)
+        .nth(0)
+        .expect("Expected one and only one primary ship to exist");
+
     egui::Window::new("Ship Cargo")
         .vscroll(true)
         .open(&mut ui_state.cargo)
@@ -347,6 +360,7 @@ fn ship_cargo_ui(mut egui_ctx: ResMut<EguiContext>, mut ui_state: ResMut<UiState
                     .striped(true)
                     .column(egui_extras::Size::remainder())
                     .column(egui_extras::Size::remainder())
+                    .column(egui_extras::Size::remainder())
                     .header(20.0, |mut header| {
                         header.col(|ui| {
                             ui.heading("Name");
@@ -354,17 +368,34 @@ fn ship_cargo_ui(mut egui_ctx: ResMut<EguiContext>, mut ui_state: ResMut<UiState
                         header.col(|ui| {
                             ui.heading("Quantity");
                         });
+                        header.col(|ui| {
+                            ui.heading("Description");
+                        });
                     })
                     .body(|mut body| {
-                        body.row(30.0, |mut row| {
-                            row.col(|ui| {
-                                ui.label("Test Item 1");
-                            });
-                            row.col(|ui| {
-                                ui.label("15");
+                        cargo_hold.items.iter().for_each(|(k, v)| {
+                            body.row(30.0, |mut row| {
+                                row.col(|ui| {
+                                    ui.label(&k.name);
+                                });
+                                row.col(|ui| {
+                                    ui.label(v.to_string());
+                                });
+                                row.col(|ui| {
+                                    ui.label(&k.description);
+                                });
                             });
                         });
                     });
+                if ui.button("Add item").clicked() {
+                    cargo_hold.store(Item::new("Iron Ore", "Some iron ore"), 1);
+                    debug!("{:?}", cargo_hold.items);
+                }
+
+                if ui.button("Remove item").clicked() {
+                    cargo_hold.remove(Item::new("Iron Ore", "Some iron ore"), 1);
+                    debug!("{:?}", cargo_hold.items);
+                }
             });
         });
 
