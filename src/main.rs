@@ -1,4 +1,7 @@
-use bevy::{log::LogSettings, prelude::*, sprite::MaterialMesh2dBundle, winit::WinitSettings};
+use bevy::{
+    log::LogSettings, prelude::*, sprite::MaterialMesh2dBundle, utils::HashMap,
+    winit::WinitSettings,
+};
 use bevy_egui::{egui, EguiContext, EguiPlugin};
 use bevy_inspector_egui::{Inspectable, RegisterInspectable, WorldInspectorPlugin};
 use bevy_pancam::*;
@@ -72,6 +75,38 @@ struct Dockable {
 
 #[derive(Component, Default)]
 struct DisplayCargo;
+
+#[derive(Component, Default)]
+struct CargoHold {
+    items: HashMap<Item, u64>,
+}
+
+impl CargoHold {
+    fn new(items: HashMap<Item, u64>) -> Self {
+        CargoHold { items }
+    }
+
+    fn store(&mut self, item: Item, quantity: u64) {
+        *self.items.entry(item).or_insert(0) += quantity;
+    }
+
+    fn remove(&mut self, item: Item, quantity: u64) {
+        self.items.entry(item).and_modify(|e| *e -= quantity);
+        self.items.retain(|_, v| *v != 0);
+    }
+}
+
+#[derive(Default, PartialEq, Eq, Hash)]
+struct Item {
+    name: String,
+    description: String,
+}
+
+impl Item {
+    fn new(name: String, description: String) -> Self {
+        Item { name, description }
+    }
+}
 
 fn spawn_solar_system(
     mut commands: Commands,
@@ -160,6 +195,7 @@ fn spawn_ship(mut commands: Commands) {
         ))
         .insert(Ship { primary: true })
         .insert(Dockable { is_docked: false })
+        .insert(CargoHold::default())
         .insert(RigidBody::Dynamic)
         .insert(CollisionShape::Cuboid {
             half_extends: Vec3::splat(3.0),
