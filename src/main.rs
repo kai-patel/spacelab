@@ -3,6 +3,7 @@ use bevy_egui::{egui, EguiContext, EguiPlugin};
 use bevy_inspector_egui::{Inspectable, RegisterInspectable, WorldInspectorPlugin};
 use bevy_pancam::*;
 use bevy_prototype_lyon::prelude::*;
+use egui_extras::TableBuilder;
 use heron::prelude::*;
 use leafwing_input_manager::prelude::*;
 
@@ -301,8 +302,34 @@ fn ship_cargo_ui(mut egui_ctx: ResMut<EguiContext>, mut ui_state: ResMut<UiState
     egui::Window::new("Ship Cargo")
         .vscroll(true)
         .open(&mut ui_state.cargo)
+        .resizable(true)
         .show(egui_ctx.ctx_mut(), |ui| {
-            ui.label("Hello World!");
+            ui.vertical(|ui| {
+                ui.heading("Cargo Manifest");
+                TableBuilder::new(ui)
+                    .resizable(true)
+                    .striped(true)
+                    .column(egui_extras::Size::remainder())
+                    .column(egui_extras::Size::remainder())
+                    .header(20.0, |mut header| {
+                        header.col(|ui| {
+                            ui.heading("Name");
+                        });
+                        header.col(|ui| {
+                            ui.heading("Quantity");
+                        });
+                    })
+                    .body(|mut body| {
+                        body.row(30.0, |mut row| {
+                            row.col(|ui| {
+                                ui.label("Test Item 1");
+                            });
+                            row.col(|ui| {
+                                ui.label("15");
+                            });
+                        });
+                    });
+            });
         });
 
     ui_state.set_changed();
