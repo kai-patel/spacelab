@@ -1497,6 +1497,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "egui_extras"
+version = "0.19.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "f698f685bb0ad39e87109e2f695ded0bccde77d5d40bbf7590cb5561c1e3039d"
+dependencies = [
+ "egui 0.19.0",
+]
+
+[[package]]
 name = "either"
 version = "1.8.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3395,6 +3404,7 @@ dependencies = [
  "bevy_egui 0.16.1",
  "bevy_pancam",
  "bevy_prototype_lyon",
+ "egui_extras",
  "heron",
  "leafwing-input-manager",
 ]
