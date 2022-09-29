@@ -1,6 +1,6 @@
 use bevy::{
     log::LogSettings, prelude::*, sprite::MaterialMesh2dBundle, utils::HashMap,
-    winit::WinitSettings,
+    winit::WinitSettings, diagnostic::{LogDiagnosticsPlugin, FrameTimeDiagnosticsPlugin},
 };
 use bevy_egui::{egui, EguiContext, EguiPlugin};
 use bevy_inspector_egui::{Inspectable, RegisterInspectable, WorldInspectorPlugin};
@@ -36,6 +36,8 @@ enum Action {
     Dock,
     Cargo,
 }
+
+struct DockEvent(Entity);
 
 #[derive(Inspectable, Component, Default)]
 struct Orbiting {
@@ -224,6 +226,36 @@ fn spawn_ship(mut commands: Commands) {
     debug!("Ship spawned");
 }
 
+fn dock_to_nearest(
+    query: Query<&GlobalTransform, With<Station>>,
+    ship_query: Query<&GlobalTransform, With<Ship>>,
+    mut dock_event: EventReader<DockEvent>,
+) {
+    for dock in dock_event.iter() {
+        let ship_location = ship_query
+            .get(dock.0)
+            .expect("Expected docking ship to exist")
+            .translation();
+
+        let ds = query
+            .iter()
+            .filter(|station_transform| {
+                station_transform.translation().distance(ship_location) < 50.0
+            })
+            .min_by(|a, b| {
+                a.translation()
+                    .distance(ship_location)
+                    .total_cmp(&b.translation().distance(ship_location))
+            });
+
+        if let Some(nearest) = ds {
+            debug!("Found nearest {:?}", nearest);
+        } else {
+            debug!("No stations nearby");
+        }
+    }
+}
+
 fn spawn_camera(mut commands: Commands) {
     debug!("Spawn camera");
     commands
@@ -404,13 +436,14 @@ fn ship_cargo_ui(
 
 fn handle_actions(
     query: Query<&ActionState<Action>, With<Ship>>,
-    mut ship_query: Query<(&mut Velocity, &mut Dockable, &mut Transform, &Ship)>,
+    mut ship_query: Query<(Entity, &mut Velocity, &mut Dockable, &mut Transform, &Ship)>,
     mut ui_state: ResMut<UiState>,
+    mut dock_event: EventWriter<DockEvent>,
 ) {
     let action_state = query.single();
 
-    for (mut velocity, mut dockable, mut transform, _) in
-        ship_query.iter_mut().filter(|(_, _, _, b)| b.primary)
+    for (entity, mut velocity, mut dockable, mut transform, _) in
+        ship_query.iter_mut().filter(|(_, _, _, _, b)| b.primary)
     {
         if !dockable.is_docked {
             if action_state.pressed(Action::Left) {
@@ -445,6 +478,9 @@ fn handle_actions(
 
         if action_state.just_pressed(Action::Dock) {
             dockable.is_docked = !dockable.is_docked;
+            if dockable.is_docked {
+                dock_event.send(DockEvent(entity));
+            }
             debug!("Docked: {:?}", dockable.is_docked);
         }
     }
@@ -514,6 +550,8 @@ fn main() {
         .insert_resource(WinitSettings::game())
         .insert_resource(UiState::new())
         .add_plugins(DefaultPlugins)
+        .add_plugin(LogDiagnosticsPlugin::default())
+        .add_plugin(FrameTimeDiagnosticsPlugin::default())
         .add_plugin(WorldInspectorPlugin::new())
         .add_plugin(PanCamPlugin::default())
         .add_plugin(InputManagerPlugin::<Action>::default())
@@ -522,6 +560,7 @@ fn main() {
         .add_plugin(EguiPlugin)
         .register_inspectable::<Orbiting>()
         .register_inspectable::<Name>()
+        .add_event::<DockEvent>()
         .add_startup_system_to_stage(StartupStage::PreStartup, spawn_camera)
         .add_startup_system_to_stage(StartupStage::PreStartup, setup_ui)
         .add_startup_system(spawn_solar_system)
@@ -532,5 +571,6 @@ fn main() {
         .add_system(handle_ui_click)
         .add_system(ship_cargo_ui)
         .add_system(handle_cargo_button_color)
+        .add_system(dock_to_nearest)
         .run();
 }
