@@ -6,7 +6,6 @@ use bevy::{
     utils::HashMap,
     winit::WinitSettings,
 };
-use bevy_easings::*;
 use bevy_egui::{egui, EguiContext, EguiPlugin};
 use bevy_inspector_egui::{Inspectable, RegisterInspectable, WorldInspectorPlugin};
 use bevy_pancam::*;
@@ -600,7 +599,6 @@ fn main() {
         .add_plugin(PhysicsPlugin::default())
         .add_plugin(ShapePlugin)
         .add_plugin(EguiPlugin)
-        .add_plugin(EasingsPlugin)
         .register_inspectable::<Orbiting>()
         .register_inspectable::<Name>()
         .add_event::<DockEvent>()
