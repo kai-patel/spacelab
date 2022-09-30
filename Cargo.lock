@@ -3407,6 +3407,7 @@ dependencies = [
  "egui_extras",
  "heron",
  "leafwing-input-manager",
+ "petgraph",
 ]
 
 [[package]]
