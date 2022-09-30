@@ -1,7 +1,12 @@
 use bevy::{
-    log::LogSettings, prelude::*, sprite::MaterialMesh2dBundle, utils::HashMap,
-    winit::WinitSettings, diagnostic::{LogDiagnosticsPlugin, FrameTimeDiagnosticsPlugin},
+    diagnostic::{FrameTimeDiagnosticsPlugin, LogDiagnosticsPlugin},
+    log::LogSettings,
+    prelude::*,
+    sprite::MaterialMesh2dBundle,
+    utils::HashMap,
+    winit::WinitSettings,
 };
+use bevy_easings::*;
 use bevy_egui::{egui, EguiContext, EguiPlugin};
 use bevy_inspector_egui::{Inspectable, RegisterInspectable, WorldInspectorPlugin};
 use bevy_pancam::*;
@@ -227,33 +232,43 @@ fn spawn_ship(mut commands: Commands) {
 }
 
 fn dock_to_nearest(
-    query: Query<&GlobalTransform, With<Station>>,
-    ship_query: Query<&GlobalTransform, With<Ship>>,
+    mut commands: Commands,
+    query: Query<(&GlobalTransform, Entity), With<Station>>,
+    mut ship_query: Query<(&GlobalTransform, &mut Dockable, Entity), With<Ship>>,
     mut dock_event: EventReader<DockEvent>,
 ) {
     for dock in dock_event.iter() {
-        let ship_location = ship_query
-            .get(dock.0)
-            .expect("Expected docking ship to exist")
-            .translation();
+        let (ship_transform, mut dockable, ship_entity) = ship_query
+            .get_mut(dock.0)
+            .expect("Expected docking ship to exist");
+
+        let ship_location = ship_transform.translation();
 
         let ds = query
             .iter()
-            .filter(|station_transform| {
+            .filter(|(station_transform, _)| {
                 station_transform.translation().distance(ship_location) < 50.0
             })
-            .min_by(|a, b| {
+            .min_by(|(a, _), (b, _)| {
                 a.translation()
                     .distance(ship_location)
                     .total_cmp(&b.translation().distance(ship_location))
             });
 
-        if let Some(nearest) = ds {
+        if let Some((_, nearest)) = ds {
             debug!("Found nearest {:?}", nearest);
+            commands
+                .entity(ship_entity)
+                .insert(Orbiting { speed: 0.01 })
+                .remove::<RigidBody>();
+            commands.entity(nearest).add_child(ship_entity);
+            dockable.is_docked = true;
         } else {
             debug!("No stations nearby");
         }
     }
+
+    dock_event.clear();
 }
 
 fn spawn_camera(mut commands: Commands) {
@@ -435,15 +450,23 @@ fn ship_cargo_ui(
 }
 
 fn handle_actions(
+    mut commands: Commands,
     query: Query<&ActionState<Action>, With<Ship>>,
-    mut ship_query: Query<(Entity, &mut Velocity, &mut Dockable, &mut Transform, &Ship)>,
+    mut ship_query: Query<(
+        Entity,
+        &mut Velocity,
+        &mut Dockable,
+        &mut Transform,
+        Option<&Parent>,
+        &Ship,
+    )>,
     mut ui_state: ResMut<UiState>,
     mut dock_event: EventWriter<DockEvent>,
 ) {
     let action_state = query.single();
 
-    for (entity, mut velocity, mut dockable, mut transform, _) in
-        ship_query.iter_mut().filter(|(_, _, _, _, b)| b.primary)
+    for (entity, mut velocity, mut dockable, mut transform, parent, _) in
+        ship_query.iter_mut().filter(|(_, _, _, _, _, b)| b.primary)
     {
         if !dockable.is_docked {
             if action_state.pressed(Action::Left) {
@@ -477,11 +500,30 @@ fn handle_actions(
         }
 
         if action_state.just_pressed(Action::Dock) {
-            dockable.is_docked = !dockable.is_docked;
-            if dockable.is_docked {
+            // If not docked, then attempt to dock
+            if !dockable.is_docked {
                 dock_event.send(DockEvent(entity));
+            } else {
+                // If already docked, undock
+
+                // Ensure parent component exists;
+                let parent_component = parent.expect("Expected docked ship to have parent");
+
+                // Get parent entity ID
+                let parent_entity = parent_component.get();
+
+                // Remove Orbiting component and add back physics for ship
+                commands
+                    .entity(entity)
+                    .remove::<Orbiting>()
+                    .insert(RigidBody::Dynamic);
+
+                // Remove ship from station children
+                commands.entity(parent_entity).remove_children(&[entity]);
+
+                // Undocking completed
+                dockable.is_docked = false;
             }
-            debug!("Docked: {:?}", dockable.is_docked);
         }
     }
 }
@@ -551,13 +593,14 @@ fn main() {
         .insert_resource(UiState::new())
         .add_plugins(DefaultPlugins)
         .add_plugin(LogDiagnosticsPlugin::default())
-        .add_plugin(FrameTimeDiagnosticsPlugin::default())
+        // .add_plugin(FrameTimeDiagnosticsPlugin::default())
         .add_plugin(WorldInspectorPlugin::new())
         .add_plugin(PanCamPlugin::default())
         .add_plugin(InputManagerPlugin::<Action>::default())
         .add_plugin(PhysicsPlugin::default())
         .add_plugin(ShapePlugin)
         .add_plugin(EguiPlugin)
+        .add_plugin(EasingsPlugin)
         .register_inspectable::<Orbiting>()
         .register_inspectable::<Name>()
         .add_event::<DockEvent>()
