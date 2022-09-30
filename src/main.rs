@@ -18,6 +18,7 @@ use leafwing_input_manager::prelude::*;
 struct UiState {
     space: bool,
     cargo: bool,
+    map: bool,
 }
 
 impl UiState {
@@ -39,6 +40,7 @@ enum Action {
     Right,
     Dock,
     Cargo,
+    Map,
 }
 
 struct DockEvent(Entity);
@@ -223,6 +225,7 @@ fn spawn_ship(mut commands: Commands) {
                 (KeyCode::Comma, Action::Left),
                 (KeyCode::Period, Action::Right),
                 (KeyCode::C, Action::Cargo),
+                (KeyCode::M, Action::Map),
             ])
             .insert_chord([KeyCode::LShift, KeyCode::D], Action::Dock)
             .build(),
@@ -524,6 +527,11 @@ fn handle_actions(
                 dockable.is_docked = false;
             }
         }
+
+        if action_state.just_pressed(Action::Map) {
+            ui_state.map = !ui_state.map;
+        }
+
     }
 }
 
