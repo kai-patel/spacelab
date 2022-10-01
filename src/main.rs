@@ -13,6 +13,8 @@ use bevy_prototype_lyon::prelude::*;
 use egui_extras::TableBuilder;
 use heron::prelude::*;
 use leafwing_input_manager::prelude::*;
+mod universe;
+use universe::universe::{Galaxy, debug_universe};
 
 #[derive(Default, Debug)]
 struct UiState {
@@ -531,7 +533,6 @@ fn handle_actions(
         if action_state.just_pressed(Action::Map) {
             ui_state.map = !ui_state.map;
         }
-
     }
 }
 
@@ -598,6 +599,7 @@ fn main() {
         })
         .insert_resource(WinitSettings::game())
         .insert_resource(UiState::new())
+        .insert_resource(Galaxy::new_undirected())
         .add_plugins(DefaultPlugins)
         .add_plugin(LogDiagnosticsPlugin::default())
         // .add_plugin(FrameTimeDiagnosticsPlugin::default())
@@ -615,6 +617,7 @@ fn main() {
         .add_startup_system(spawn_solar_system)
         .add_startup_system(spawn_ship)
         .add_startup_system_to_stage(StartupStage::PostStartup, spawn_orbital_paths)
+        .add_startup_system_to_stage(StartupStage::PostStartup, debug_universe)
         .add_system(draw_orbiting)
         .add_system(handle_actions)
         .add_system(handle_ui_click)
