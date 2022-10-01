@@ -15,6 +15,7 @@ heron = { version = "4.0.1", features = ["2d"] }
 leafwing-input-manager = "0.5.2"
 egui_extras = "0.19.0"
 petgraph = "0.6.2"
+rand = "0.8.5"
 
 [profile.dev]
 opt-level = 1
