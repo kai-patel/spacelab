@@ -599,7 +599,7 @@ fn main() {
         })
         .insert_resource(WinitSettings::game())
         .insert_resource(UiState::new())
-        .insert_resource(Galaxy::new_undirected())
+        .insert_resource(Galaxy::from_file("world/galaxy.json"))
         .add_plugins(DefaultPlugins)
         .add_plugin(LogDiagnosticsPlugin::default())
         // .add_plugin(FrameTimeDiagnosticsPlugin::default())
