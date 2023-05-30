@@ -1,10 +1,6 @@
 use bevy::{
-    diagnostic::{FrameTimeDiagnosticsPlugin, LogDiagnosticsPlugin},
-    log::LogSettings,
-    prelude::*,
-    sprite::MaterialMesh2dBundle,
-    utils::HashMap,
-    winit::WinitSettings,
+    diagnostic::LogDiagnosticsPlugin, log::LogSettings, prelude::*, sprite::MaterialMesh2dBundle,
+    utils::HashMap, winit::WinitSettings,
 };
 use bevy_egui::{egui, EguiContext, EguiPlugin};
 use bevy_inspector_egui::{Inspectable, RegisterInspectable, WorldInspectorPlugin};
@@ -14,7 +10,7 @@ use egui_extras::TableBuilder;
 use heron::prelude::*;
 use leafwing_input_manager::prelude::*;
 mod universe;
-use universe::universe::{Galaxy, debug_universe};
+use universe::universe::{debug_universe, Galaxy};
 
 #[derive(Default, Debug)]
 struct UiState {
@@ -91,6 +87,7 @@ struct CargoHold {
     items: HashMap<Item, u64>,
 }
 
+#[allow(dead_code)]
 impl CargoHold {
     fn new(items: HashMap<Item, u64>) -> Self {
         CargoHold { items }

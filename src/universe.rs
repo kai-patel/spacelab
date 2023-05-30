@@ -1,5 +1,5 @@
 pub mod universe {
-    use bevy::prelude::{debug, warn, Res};
+    use bevy::prelude::{debug, Res};
     use petgraph::prelude::*;
 
     #[derive(Debug, Default)]
@@ -10,7 +10,7 @@ pub mod universe {
             Galaxy::default()
         }
 
-        pub fn from_file(file_path: &str) -> Self {
+        pub fn from_file(_file_path: &str) -> Self {
             println!("TODO: Load Galaxy from file");
             let graph = random_graph(5, EdgeProbability(0.9));
             println!("Random graph generated: {:?}", graph);
@@ -18,6 +18,7 @@ pub mod universe {
         }
     }
 
+    #[allow(dead_code)]
     #[derive(Debug, Default)]
     pub struct SolarSystem {
         star: String,
@@ -33,6 +34,7 @@ pub mod universe {
     #[derive(Debug, Default)]
     struct EdgeProbability(f32);
 
+    #[allow(dead_code)]
     impl EdgeProbability {
         fn new(p: f32) -> Self {
             EdgeProbability(p.clamp(0., 1.))
