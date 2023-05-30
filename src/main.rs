@@ -10,7 +10,7 @@ use egui_extras::TableBuilder;
 use heron::prelude::*;
 use leafwing_input_manager::prelude::*;
 mod universe;
-use universe::universe::{debug_universe, Galaxy};
+use universe::{debug_universe, Galaxy};
 
 #[derive(Default, Debug)]
 struct UiState {
@@ -356,6 +356,7 @@ fn setup_ui(mut commands: Commands, asset_server: Res<AssetServer>) {
         });
 }
 
+#[allow(clippy::type_complexity)]
 fn handle_ui_click(
     mut query: Query<&Interaction, (Changed<Interaction>, With<Button>, With<DisplayCargo>)>,
     mut ui_state: ResMut<UiState>,
@@ -392,8 +393,7 @@ fn ship_cargo_ui(
 ) {
     let (mut cargo_hold, _) = query
         .iter_mut()
-        .filter(|(_, ship)| ship.primary)
-        .nth(0)
+        .find(|(_, ship)| ship.primary)
         .expect("Expected one and only one primary ship to exist");
 
     egui::Window::new("Ship Cargo")
@@ -450,6 +450,7 @@ fn ship_cargo_ui(
     ui_state.set_changed();
 }
 
+#[allow(clippy::type_complexity)]
 fn handle_actions(
     mut commands: Commands,
     query: Query<&ActionState<Action>, With<Ship>>,
